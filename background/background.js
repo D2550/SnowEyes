@@ -1,3 +1,4 @@
+import browser from "../lib/browser-polyfill.min.js";
 import { FINGERPRINT_CONFIG } from './config/fingerprint.config.js';
 // 在文件开头添加一个Map来存储每个标签页的结果计数
 const tabCounts = new Map();
@@ -34,14 +35,14 @@ function updateBadge(results, tabId) {
   tabCounts.set(tabId, nonEmptyCategories);
 
   // 更新当前活动标签页的badge
-  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+  browser.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if (tabs[0]?.id === tabId) {
-      chrome.action.setBadgeText({ 
+      browser.action.setBadgeText({ 
         text: nonEmptyCategories > 0 ? nonEmptyCategories.toString() : '',
         tabId: tabId
       });
       
-      chrome.action.setBadgeBackgroundColor({ 
+      browser.action.setBadgeBackgroundColor({ 
         color: nonEmptyCategories > 0 ? '#4dabf7' : '#666666',
         tabId: tabId
       });
@@ -50,21 +51,21 @@ function updateBadge(results, tabId) {
 }
 
 // 添加标签页切换事件监听器
-chrome.tabs.onActivated.addListener((activeInfo) => {
+browser.tabs.onActivated.addListener((activeInfo) => {
   const count = tabCounts.get(activeInfo.tabId);
-  chrome.action.setBadgeText({ 
+  browser.action.setBadgeText({ 
     text: count > 0 ? count.toString() : '',
     tabId: activeInfo.tabId
   });
   
-  chrome.action.setBadgeBackgroundColor({ 
+  browser.action.setBadgeBackgroundColor({ 
     color: count > 0 ? '#4dabf7' : '#666666',
     tabId: activeInfo.tabId
   });
 });
 
 // 添加标签页移除事件监听器
-chrome.tabs.onRemoved.addListener((tabId) => {
+browser.tabs.onRemoved.addListener((tabId) => {
   // 清除该标签页的数据
   tabCounts.delete(tabId);
   Object.values(analyticsDetected).forEach(map => map.delete(tabId));
@@ -121,7 +122,7 @@ const analyticsPatterns = Object.entries(FINGERPRINT_CONFIG.ANALYTICS).map(([typ
   type: type
 }));
 
-chrome.webRequest.onBeforeRequest.addListener(
+browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     const matchedAnalytics = analyticsPatterns.find(item => 
       details.url.match(new RegExp(item.pattern.replace(/[*]/g, '.*')))
@@ -208,7 +209,7 @@ function processHeaders(headers, tabId) {
 }
 
 // 修改监听器的处理方式
-chrome.webRequest.onHeadersReceived.addListener(
+browser.webRequest.onHeadersReceived.addListener(
   async (details) => {
     // 只处理主文档请求，并且立即返回响应头
     if (details.type !== 'main_frame') return { responseHeaders: details.responseHeaders };
@@ -220,7 +221,7 @@ chrome.webRequest.onHeadersReceived.addListener(
       serverFingerprints.set(details.tabId, fingerprints);
     
       // 延迟处理cookies
-      chrome.cookies.getAll({ url: details.url }, (cookies) => {
+      browser.cookies.getAll({ url: details.url }, (cookies) => {
         if (cookies.length > 0) {
           const cookieNames = cookies.map(cookie => cookie.name).join(';');
           const techFromCookies = identifyTechnologyFromCookie(cookieNames);
@@ -239,7 +240,7 @@ chrome.webRequest.onHeadersReceived.addListener(
 );
 
 // 监听器更新指纹
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.type === 'UPDATE_BUILDER') {
       let fingerprints = serverFingerprints.get(sender.tab.id);
@@ -315,7 +316,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => {
         // 如果 fetch 失败，尝试使用 chrome.scripting.executeScript
         if (sender.tab) {
-          chrome.scripting.executeScript({
+          browser.scripting.executeScript({
             target: { tabId: sender.tab.id },
             function: (url) => {
               return fetch(url, {

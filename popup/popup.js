@@ -186,8 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   getCurrentTab().then(tab => {
     if (tab) {
-      chrome.tabs.sendMessage(tab.id, {type: 'GET_RESULTS', tabId: tab.id}, response => {
-        if (chrome.runtime.lastError) {
+      browser.tabs.sendMessage(tab.id, {type: 'GET_RESULTS', tabId: tab.id}, response => {
+        if (browser.runtime.lastError) {
           container.innerHTML = '<div class="error">无法连接到页面，尝试刷新页面后再试吧</div>';
         } else if (response === 'WHITELISTED') {
           container.innerHTML = '<div class="whitelisted">当前域名在白名单中，已跳过扫描</div>';
@@ -203,13 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 监听来自 content script 的消息
-chrome.runtime.onMessage.addListener((message) => {
+browser.runtime.onMessage.addListener((message) => {
   if (message.type === 'SCAN_UPDATE' && message.results && message.tabId===currentActiveTabId) {
     displayResults(message.results);
   }
 });
 // 监听标签页切换事件
-chrome.tabs.onActivated.addListener((activeInfo) => {
+browser.tabs.onActivated.addListener((activeInfo) => {
   // 更新当前活动标签页ID
    currentActiveTabId = activeInfo.tabId;
 });
@@ -229,8 +229,8 @@ function initConfigPage() {
   getCurrentTab().then(tab => {
     if (tab) {
       // 获取配置信息
-      chrome.tabs.sendMessage(tab.id, {type: 'GET_CONFIG'}, response => {
-        if (chrome.runtime.lastError || !response || !response.config) {
+      browser.tabs.sendMessage(tab.id, {type: 'GET_CONFIG'}, response => {
+        if (browser.runtime.lastError || !response || !response.config) {
           const container = document.querySelector('.config-page .container');
           container.innerHTML = '<div class="error">请刷新页面后重试</div>';
           return;
@@ -238,7 +238,7 @@ function initConfigPage() {
         displayConfig(response.config);
         
         // 获取动态扫描设置
-        chrome.storage.local.get(['dynamicScan', 'deepScan'], (result) => {
+        browser.storage.local.get(['dynamicScan', 'deepScan'], (result) => {
           const dynamicScanCheckbox = document.getElementById('dynamicScan');
           const deepScanCheckbox = document.getElementById('deepScan');
           if (dynamicScanCheckbox) {
@@ -315,7 +315,7 @@ function initFingerprintPage() {
   getCurrentTab().then(tab => {
     if (tab) {
       console.log('Requesting fingerprints for tab:', tab.id);
-      chrome.runtime.sendMessage({
+      browser.runtime.sendMessage({
         type: 'GET_FINGERPRINTS',
         tabId: tab.id
       }, response => {
@@ -328,7 +328,7 @@ function initFingerprintPage() {
   });
 }
 // 添加消息监听器处理 popup 的请求
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_FINGERPRINTS') {
     const fingerprints = serverFingerprints.get(request.tabId);
     if (fingerprints) {
@@ -365,7 +365,7 @@ function initAnalysisPage() {
         container.innerHTML = '<div class="error">请求超时，请重试</div>';
       }, 10000);
 
-      chrome.runtime.sendMessage({
+      browser.runtime.sendMessage({
         type: 'GET_SITE_ANALYSIS',
         domain: domain
       }, (response) => {
@@ -589,18 +589,18 @@ function handleNavClick(e) {
 
 // 添加通用的标签页查询函数
 async function getCurrentTab() {
-  const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+  const tabs = await browser.tabs.query({active: true, currentWindow: true});
   return tabs[0] || null;
 }
 
 // 修改使用标签页查询的函数
 function handleDynamicScan(e) {
   const enabled = e.target.checked;
-  chrome.storage.local.set({ dynamicScan: enabled });
+  browser.storage.local.set({ dynamicScan: enabled });
   
   getCurrentTab().then(tab => {
     if (tab) {
-      chrome.tabs.sendMessage(tab.id, {
+      browser.tabs.sendMessage(tab.id, {
         type: 'UPDATE_DYNAMIC_SCAN',
         enabled: enabled
       });
@@ -610,11 +610,11 @@ function handleDynamicScan(e) {
 
 function handleDeepScan(e) {
   const enabled = e.target.checked;
-  chrome.storage.local.set({ deepScan: enabled });
+  browser.storage.local.set({ deepScan: enabled });
   
   getCurrentTab().then(tab => {
     if (tab) {
-      chrome.tabs.sendMessage(tab.id, {
+      browser.tabs.sendMessage(tab.id, {
         type: 'UPDATE_DEEP_SCAN',
         enabled: enabled
       });

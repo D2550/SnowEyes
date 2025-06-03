@@ -2,7 +2,7 @@ let dynamicScanEnabled = false;
 let deepScanEnabled = false;
 
 // 在初始化时获取设置
-chrome.storage.local.get(['dynamicScan', 'deepScan'], (result) => {
+browser.storage.local.get(['dynamicScan', 'deepScan'], (result) => {
   dynamicScanEnabled = result.dynamicScan === true;  // 修改判断逻辑，只有明确设置为true时才开启
   deepScanEnabled = result.deepScan === true;
 });
@@ -26,7 +26,7 @@ let currentTabId = null;
 
 const getTabId = () => {
   return new Promise(resolve => {
-    chrome.runtime.sendMessage({ type: 'GET_TAB_ID' }, response => {
+    browser.runtime.sendMessage({ type: 'GET_TAB_ID' }, response => {
       currentTabId = response.tabId;
       resolve(currentTabId);
     });
@@ -53,7 +53,7 @@ async function scanSources(sources, isHtmlContent = false, tabId) {
         for (const key in tabResults.get(tabId)) {
           results[key] = Array.from(tabResults.get(tabId)[key]);
         }
-        chrome.runtime.sendMessage({
+        browser.runtime.sendMessage({
           type: 'SCAN_UPDATE',
           results: results,
           tabId: tabId
@@ -61,7 +61,7 @@ async function scanSources(sources, isHtmlContent = false, tabId) {
           // 忽略消息发送失败的错误
         });
         
-        chrome.runtime.sendMessage({
+        browser.runtime.sendMessage({
           type: 'UPDATE_BADGE',
           results: results,
           tabId: tabId
@@ -490,7 +490,7 @@ async function collectAndScanResources(depth = 0, maxDepth = 3, tabId) {
 
       try {
         const response = await new Promise(resolve => {
-          chrome.runtime.sendMessage({type: 'FETCH_JS', url: url}, resolve);
+          browser.runtime.sendMessage({type: 'FETCH_JS', url: url}, resolve);
         });
 
         if (response?.content) {
@@ -529,7 +529,7 @@ async function collectAndScanResources(depth = 0, maxDepth = 3, tabId) {
 }
 
 // 监听来自 popup 的消息
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.type === 'GET_RESULTS') {
       // 检查是否在白名单中
